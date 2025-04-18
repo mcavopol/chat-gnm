@@ -16,6 +16,7 @@ import { addMessageToChat, chatExists, createChat, getChat, processUserMessage }
 import { useRouter, useSearchParams } from "next/navigation"
 import { AboutYouModal } from "./about-you-modal"
 import { ConversationStarters } from "./conversation-starters"
+import { motion } from "framer-motion"
 
 export function ChatForm({ className, ...props }: React.ComponentProps<"form">) {
   const router = useRouter()
@@ -198,21 +199,26 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
   }
 
   const header = (
-    <header className="m-auto flex max-w-96 flex-col gap-5 text-center">
+    <motion.header
+      className="m-auto flex max-w-96 flex-col gap-5 text-center"
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
       <h1 className="text-2xl font-semibold leading-none tracking-tight">ChatGNM</h1>
       <p className="text-muted-foreground text-sm">
         Explore and understand the principles of German New Medicine through an AI-powered conversation.
       </p>
-      <p className="text-muted-foreground text-sm">
-        Ask a question about GNM concepts or describe a symptom to get started.
-      </p>
-    </header>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3, duration: 0.5 }}>
+        <p className="text-muted-foreground text-sm font-medium">Choose a topic or ask your own question:</p>
+      </motion.div>
+    </motion.header>
   )
 
   const messageList = (
     <div className="my-4 flex h-fit min-h-full flex-col gap-4">
       {messages.map((message, index) => (
-        <div
+        <motion.div
           key={index}
           data-role={message.role}
           className={cn(
@@ -221,9 +227,12 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
               ? "self-start bg-gray-100 text-black"
               : "self-end bg-blue-500 text-white [&_.markdown-content_a]:text-white [&_.markdown-content_a]:underline [&_.markdown-content_code]:bg-blue-400",
           )}
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.3 }}
         >
           <MessageContent content={message.content} />
-        </div>
+        </motion.div>
       ))}
     </div>
   )
@@ -301,12 +310,28 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
           </div>
         </div>
 
-        {error && <div className="mx-6 my-2 p-2 bg-red-50 text-red-500 text-sm rounded-md">{error}</div>}
+        {error && (
+          <motion.div
+            className="mx-6 my-2 p-2 bg-red-50 text-red-500 text-sm rounded-md"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+          >
+            {error}
+          </motion.div>
+        )}
 
         <div className="flex-1 content-center overflow-y-auto px-6">
           {isLoading ? (
             <div className="flex justify-center items-center h-full">
-              <div className="text-gray-500">Loading...</div>
+              <motion.div
+                className="text-gray-500"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                Loading...
+              </motion.div>
             </div>
           ) : messages.length ? (
             messageList
@@ -318,9 +343,12 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
           )}
         </div>
 
-        <form
+        <motion.form
           onSubmit={handleSubmit}
           className="border-input bg-background focus-within:ring-ring/10 relative mx-6 mb-6 flex items-center rounded-[16px] border px-3 py-1.5 pr-8 text-sm focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-0"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
         >
           <AutoResizeTextarea
             onKeyDown={handleKeyDown}
@@ -344,7 +372,7 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
             </TooltipTrigger>
             <TooltipContent sideOffset={12}>Submit</TooltipContent>
           </Tooltip>
-        </form>
+        </motion.form>
 
         <ChatHistory
           isOpen={isHistoryOpen}

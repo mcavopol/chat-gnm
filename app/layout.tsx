@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Inter } from "next/font/google"
 import type { ReactNode } from "react"
+import { AuthProvider } from "@/context/auth-context"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -15,7 +16,9 @@ export default function Layout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body className={cn("flex min-h-svh flex-col antialiased", inter.className)}>
-        <TooltipProvider delayDuration={0}>{children}</TooltipProvider>
+        <AuthProvider>
+          <TooltipProvider delayDuration={0}>{children}</TooltipProvider>
+        </AuthProvider>
       </body>
     </html>
   )
