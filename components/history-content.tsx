@@ -17,16 +17,6 @@ export function HistoryContent({ currentChatId, onSelectChat }: HistoryContentPr
   const [chats, setChats] = useState<Chat[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
-  const [deletedCurrentChat, setDeletedCurrentChat] = useState(false)
-
-  // Effect to handle redirection when current chat is deleted
-  useEffect(() => {
-    if (deletedCurrentChat) {
-      router.push("/chat")
-      // Reset the flag after redirection
-      setDeletedCurrentChat(false)
-    }
-  }, [deletedCurrentChat, router])
 
   const loadChats = async () => {
     setIsLoading(true)
@@ -46,13 +36,23 @@ export function HistoryContent({ currentChatId, onSelectChat }: HistoryContentPr
 
   const handleDeleteChat = async (chatId: string, e: React.MouseEvent) => {
     e.stopPropagation()
+    e.preventDefault()
+
     try {
+      // First, check if this is the current chat
+      const isDeletingCurrentChat = chatId === currentChatId
+
+      // Delete the chat
       await deleteChat(chatId)
+
+      // Update the local state
       setChats(chats.filter((chat) => chat.id !== chatId))
 
-      // If the deleted chat is the current one, set the flag to trigger redirection
-      if (chatId === currentChatId) {
-        setDeletedCurrentChat(true)
+      // If we're deleting the current chat, redirect to /chat
+      if (isDeletingCurrentChat) {
+        // Use window.location for a hard redirect instead of router.push
+        window.location.href = "/chat"
+        return
       }
     } catch (error) {
       console.error("Failed to delete chat:", error)

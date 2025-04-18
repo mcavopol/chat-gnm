@@ -200,6 +200,7 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
   }
 
   const openNavModal = (tab: "about" | "history") => {
+    // Set the tab first, then open the modal
     setNavModalTab(tab)
     setIsNavModalOpen(true)
   }

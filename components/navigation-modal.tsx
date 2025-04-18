@@ -30,6 +30,13 @@ export function NavigationModal({
   const isMobile = useMediaQuery("(max-width: 640px)")
   const router = useRouter()
 
+  // Update activeTab when initialTab changes
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab)
+    }
+  }, [initialTab])
+
   // Close the modal when clicking escape
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
