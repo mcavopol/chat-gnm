@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Trash2, X } from "lucide-react"
 import { useEffect, useState } from "react"
 import { type Chat, deleteChat, getChats } from "@/lib/chat-store"
+import { useRouter } from "next/navigation"
 
 interface ChatHistoryProps {
   isOpen: boolean
@@ -19,6 +20,7 @@ interface ChatHistoryProps {
 export function ChatHistory({ isOpen, onClose, isMobile = false, currentChatId, onSelectChat }: ChatHistoryProps) {
   const [chats, setChats] = useState<Chat[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const router = useRouter()
 
   const loadChats = async () => {
     setIsLoading(true)
@@ -67,6 +69,11 @@ export function ChatHistory({ isOpen, onClose, isMobile = false, currentChatId, 
     try {
       await deleteChat(chatId)
       setChats(chats.filter((chat) => chat.id !== chatId))
+
+      // If the deleted chat is the current one, redirect to /chat
+      if (chatId === currentChatId) {
+        router.push("/chat")
+      }
     } catch (error) {
       console.error("Failed to delete chat:", error)
     }

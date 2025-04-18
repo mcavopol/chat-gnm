@@ -3,28 +3,26 @@
 import type React from "react"
 import { cn } from "@/lib/utils"
 import { useChat } from "ai/react"
-import { ArrowUpIcon, HistoryIcon, Settings, PlusCircle, User } from "lucide-react"
+import { ArrowUpIcon, HistoryIcon, PlusCircle, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import { AutoResizeTextarea } from "@/components/autoresize-textarea"
 import { useEffect, useState } from "react"
-import { ChatHistory } from "@/components/chat-history"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { MessageContent } from "@/components/message-content"
-import Link from "next/link"
 import { addMessageToChat, chatExists, createChat, getChat, processUserMessage } from "@/lib/chat-store"
 import { useRouter, useSearchParams } from "next/navigation"
-import { AboutYouModal } from "./about-you-modal"
-import { ConversationStarters } from "./conversation-starters"
+import { NavigationModal } from "./navigation-modal"
 import { motion } from "framer-motion"
+import { ConversationStarters } from "./conversation-starters"
 
 export function ChatForm({ className, ...props }: React.ComponentProps<"form">) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const chatId = searchParams.get("id")
 
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false)
-  const [isAboutYouOpen, setIsAboutYouOpen] = useState(false)
+  const [isNavModalOpen, setIsNavModalOpen] = useState(false)
+  const [navModalTab, setNavModalTab] = useState<"about" | "history">("about")
   const [isCreatingChat, setIsCreatingChat] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -186,16 +184,24 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
 
   const handleSelectChat = (selectedChatId: string) => {
     router.push(`/chat?id=${selectedChatId}`)
-    setIsHistoryOpen(false)
   }
 
-  const handleSelectStarter = (starter: string) => {
+  // Modified to automatically submit the form when a starter is selected
+  const handleSelectStarter = async (starter: string) => {
     setInput(starter)
-    // Optional: Focus the input field after selecting a starter
-    const textarea = document.querySelector("textarea")
-    if (textarea) {
-      textarea.focus()
-    }
+
+    // Use setTimeout to ensure the input is set before submitting
+    setTimeout(() => {
+      const form = document.querySelector("form")
+      if (form) {
+        form.requestSubmit()
+      }
+    }, 100)
+  }
+
+  const openNavModal = (tab: "about" | "history") => {
+    setNavModalTab(tab)
+    setIsNavModalOpen(true)
   }
 
   const header = (
@@ -237,6 +243,9 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
     </div>
   )
 
+  // Determine if the submit button should have a blue background
+  const hasText = input.trim().length > 0
+
   return (
     <TooltipProvider>
       <main
@@ -264,42 +273,31 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
             <TooltipContent>Start a new chat</TooltipContent>
           </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={cn("flex items-center gap-1.5 h-10", isMobile && "px-2.5 py-2")}
-                onClick={() => setIsAboutYouOpen(true)}
-                aria-label="About you"
-              >
-                <User size={isMobile ? 18 : 16} />
-                {!isMobile && <span>About You</span>}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>View and edit what ChatGNM knows about you</TooltipContent>
-          </Tooltip>
-
           <div className="flex">
-            <Link href="/admin" className="mr-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className={cn("flex items-center gap-1.5 h-10", isMobile && "px-2.5 py-2")}
-                aria-label="Admin settings"
-              >
-                <Settings size={isMobile ? 18 : 16} />
-                {!isMobile && <span>Admin</span>}
-              </Button>
-            </Link>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn("flex items-center gap-1.5 h-10 mr-2", isMobile && "px-2.5 py-2")}
+                  onClick={() => openNavModal("about")}
+                  aria-label="About you"
+                >
+                  <User size={isMobile ? 18 : 16} />
+                  {!isMobile && <span>About You</span>}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>View and edit what ChatGNM knows about you</TooltipContent>
+            </Tooltip>
+
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   size="sm"
                   className={cn("flex items-center gap-1.5 h-10", isMobile && "px-2.5 py-2")}
-                  onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-                  aria-label="Toggle chat history"
+                  onClick={() => openNavModal("history")}
+                  aria-label="Chat history"
                 >
                   <HistoryIcon size={isMobile ? 18 : 16} />
                   {!isMobile && <span>History</span>}
@@ -364,7 +362,10 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
                 type="submit"
                 variant="ghost"
                 size="sm"
-                className="absolute bottom-1 right-1 size-6 rounded-full"
+                className={cn(
+                  "absolute bottom-1 right-1 size-6 rounded-full transition-colors duration-300",
+                  hasText && "bg-blue-600 text-white hover:bg-blue-700",
+                )}
                 disabled={isCreatingChat || isLoading || !input.trim()}
               >
                 <ArrowUpIcon size={16} />
@@ -374,15 +375,13 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
           </Tooltip>
         </motion.form>
 
-        <ChatHistory
-          isOpen={isHistoryOpen}
-          onClose={() => setIsHistoryOpen(false)}
-          isMobile={isMobile}
+        <NavigationModal
+          isOpen={isNavModalOpen}
+          onClose={() => setIsNavModalOpen(false)}
+          initialTab={navModalTab}
           currentChatId={chatId}
           onSelectChat={handleSelectChat}
         />
-
-        <AboutYouModal isOpen={isAboutYouOpen} onClose={() => setIsAboutYouOpen(false)} />
       </main>
     </TooltipProvider>
   )

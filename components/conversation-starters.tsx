@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { MessageSquare, BookOpen, Activity, RefreshCw } from "lucide-react"
+import { MessageSquare, BookOpen, Activity, RefreshCw, Stethoscope } from "lucide-react"
 import { motion } from "framer-motion"
 
 interface ConversationStartersProps {
@@ -84,6 +84,28 @@ export function ConversationStarters({ onSelectStarter, className }: Conversatio
             </div>
           </motion.button>
         ))}
+
+        {/* New wider conversation starter */}
+        <motion.button
+          className={cn(
+            "group text-left p-4 border rounded-xl transition-colors duration-300 shadow-sm",
+            "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500",
+            "bg-red-50 border-red-200 hover:bg-red-100",
+            "col-span-1 md:col-span-2 mt-1", // Span 2 columns on md screens and above
+          )}
+          onClick={() => onSelectStarter("Help me troubleshoot a symptom.")}
+          variants={itemVariants}
+          whileTap={{ scale: 0.98 }}
+        >
+          <div className="flex items-center space-x-3">
+            <div className="flex-shrink-0 transition-colors duration-300 text-red-500 group-hover:text-red-600">
+              <Stethoscope size={18} />
+            </div>
+            <p className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors duration-300 font-medium">
+              Help me troubleshoot a symptom.
+            </p>
+          </div>
+        </motion.button>
       </motion.div>
     </div>
   )
