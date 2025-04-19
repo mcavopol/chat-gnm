@@ -62,10 +62,10 @@
     "ai": "latest",
     "@ai-sdk/openai": "latest",
     "nanoid": "latest",
-    "react-markdown": "latest",
-    "remark-gfm": "latest",
+    "framer-motion": "latest",
     "crypto": "latest",
-    "framer-motion": "latest"
+    "react-markdown": "latest",
+    "remark-gfm": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",

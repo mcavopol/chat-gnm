@@ -34,6 +34,9 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
   const [showLoginPrompt, setShowLoginPrompt] = useState(false)
   const [hasCompletedSecondExchange, setHasCompletedSecondExchange] = useState(false)
   const isMobile = useMediaQuery("(max-width: 640px)")
+  const isTablet = useMediaQuery("(min-width: 641px) and (max-width: 1023px)")
+  const isDesktop = useMediaQuery("(min-width: 1024px)")
+  const isLargeDesktop = useMediaQuery("(min-width: 1440px)")
   const [chatLoadAttempted, setChatLoadAttempted] = useState(false)
 
   // Use a ref to track the message count
@@ -427,17 +430,19 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
 
   const header = (
     <motion.header
-      className="m-auto flex max-w-96 flex-col gap-5 text-center"
+      className="m-auto flex flex-col gap-5 text-center max-w-full md:max-w-2xl lg:max-w-3xl"
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <h1 className="text-2xl font-semibold leading-none tracking-tight">ChatGNM</h1>
-      <p className="text-muted-foreground text-sm">
+      <h1 className="text-2xl md:text-3xl lg:text-4xl font-semibold leading-none tracking-tight">ChatGNM</h1>
+      <p className="text-muted-foreground text-sm md:text-base">
         Explore and understand the principles of German New Medicine through an AI-powered conversation.
       </p>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3, duration: 0.5 }}>
-        <p className="text-muted-foreground text-sm font-medium">Choose a topic or ask your own question:</p>
+        <p className="text-muted-foreground text-sm md:text-base font-medium">
+          Choose a topic or ask your own question:
+        </p>
       </motion.div>
     </motion.header>
   )
@@ -449,7 +454,7 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
           key={message.id || index}
           data-role={message.role}
           className={cn(
-            "max-w-[80%] rounded-xl px-4 py-3 text-sm",
+            "max-w-[80%] rounded-xl px-4 py-3 text-sm md:text-base",
             message.role === "assistant"
               ? "self-start bg-gray-100 text-black"
               : "self-end bg-blue-500 text-white [&_.markdown-content_a]:text-white [&_.markdown-content_a]:underline [&_.markdown-content_code]:bg-blue-400",
@@ -477,24 +482,17 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
 
   const showInputForm = !shouldHideInput
 
-  // Debug output
-  console.log("Render state:", {
-    isGuest,
-    isAuthenticated,
-    showLoginPrompt,
-    hasCompletedSecondExchange,
-    userMessageCount: userMessageCountRef.current,
-    isAiLoading,
-    shouldHideInput,
-    showInputForm,
-    messagesLength: messages.length,
-  })
+  // Determine the appropriate max-width based on screen size
+  const containerMaxWidth = cn(
+    isLargeDesktop ? "max-w-5xl" : isDesktop ? "max-w-4xl" : isTablet ? "max-w-2xl" : "max-w-[35rem]",
+  )
 
   return (
     <TooltipProvider>
       <main
         className={cn(
-          "ring-none mx-auto flex h-svh max-h-svh w-full max-w-[35rem] flex-col items-stretch border-none relative",
+          "ring-none mx-auto flex h-svh max-h-svh w-full flex-col items-stretch border-none relative",
+          containerMaxWidth,
           className,
         )}
         {...props}
@@ -609,7 +607,7 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
           {showInputForm && (
             <motion.form
               onSubmit={handleSubmit}
-              className="border-input bg-background focus-within:ring-ring/10 relative mx-6 mb-6 flex items-center rounded-[16px] border px-3 py-1.5 pr-8 text-sm focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-0"
+              className="border-input bg-background focus-within:ring-ring/10 relative mx-6 mb-6 flex items-center rounded-[16px] border px-3 py-1.5 pr-8 text-sm md:text-base focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-0"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
@@ -620,7 +618,7 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
                 onChange={(v) => setInput(v)}
                 value={input}
                 placeholder="Enter a message"
-                className="placeholder:text-muted-foreground flex-1 bg-transparent focus:outline-none"
+                className="placeholder:text-muted-foreground flex-1 bg-transparent focus:outline-none text-sm md:text-base"
                 disabled={isCreatingChat || isLoading}
               />
               <Tooltip>
@@ -630,12 +628,12 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
                     variant="ghost"
                     size="sm"
                     className={cn(
-                      "absolute bottom-1 right-1 size-6 rounded-full transition-colors duration-300",
+                      "absolute bottom-1 right-1 size-6 md:size-8 rounded-full transition-colors duration-300",
                       hasText && "bg-blue-600 text-white hover:bg-blue-700",
                     )}
                     disabled={isCreatingChat || isLoading || !input.trim()}
                   >
-                    <ArrowUpIcon size={16} />
+                    <ArrowUpIcon size={isMobile ? 16 : 18} />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent sideOffset={12}>Submit</TooltipContent>

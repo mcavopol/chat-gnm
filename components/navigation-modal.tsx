@@ -32,6 +32,8 @@ export function NavigationModal({
 }: NavigationModalProps) {
   const [activeTab, setActiveTab] = useState<"about" | "history">(initialTab)
   const isMobile = useMediaQuery("(max-width: 640px)")
+  const isTablet = useMediaQuery("(min-width: 641px) and (max-width: 1023px)")
+  const isDesktop = useMediaQuery("(min-width: 1024px)")
   const router = useRouter()
 
   // Update activeTab when initialTab changes
@@ -73,6 +75,11 @@ export function NavigationModal({
 
   if (!isOpen) return null
 
+  // Determine modal width based on screen size
+  const modalWidth = cn(
+    isMobile ? "w-[95%]" : isTablet ? "w-[80%] max-w-[700px]" : isDesktop ? "w-[60%] max-w-[900px]" : "w-[700px]",
+  )
+
   return (
     <>
       {/* Backdrop */}
@@ -82,7 +89,7 @@ export function NavigationModal({
       <motion.div
         className={cn(
           "fixed inset-x-0 top-10 mx-auto z-50 bg-white shadow-lg rounded-lg max-h-[80vh] overflow-hidden",
-          isMobile ? "w-[95%]" : "w-[700px]",
+          modalWidth,
         )}
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -123,7 +130,7 @@ export function NavigationModal({
 
         <div className="overflow-y-auto max-h-[calc(80vh-60px)]">
           {activeTab === "about" ? (
-            <AboutYouContent onMemoryChange={onMemoryChange} />
+            <AboutYouContent onMemoryChange={onMemoryChange} onClose={onClose} />
           ) : (
             <HistoryContent currentChatId={currentChatId} onSelectChat={handleSelectChat} onChatChange={onChatChange} />
           )}

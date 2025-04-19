@@ -18,7 +18,9 @@ export default function Layout({ children }: { children: ReactNode }) {
     <html lang="en">
       <body className={cn("flex min-h-svh flex-col antialiased", inter.className)}>
         <AuthProvider>
-          <TooltipProvider delayDuration={0}>{children}</TooltipProvider>
+          <TooltipProvider delayDuration={0}>
+            <div className="w-full mx-auto">{children}</div>
+          </TooltipProvider>
           <Toaster />
         </AuthProvider>
       </body>

@@ -12,9 +12,10 @@ import { useRouter } from "next/navigation"
 
 interface AboutYouContentProps {
   onMemoryChange?: () => void
+  onClose?: () => void
 }
 
-export function AboutYouContent({ onMemoryChange }: AboutYouContentProps) {
+export function AboutYouContent({ onMemoryChange, onClose }: AboutYouContentProps) {
   const { toast } = useToast()
   const { logout } = useAuth()
   const router = useRouter()
@@ -165,12 +166,28 @@ export function AboutYouContent({ onMemoryChange }: AboutYouContentProps) {
   }
 
   const handleLogout = () => {
+    // First, close the modal if onClose is provided
+    if (onClose) {
+      onClose()
+    }
+
+    // Perform logout
     logout()
+
+    // Show a temporary toast notification
     toast({
       title: "Logged out",
       description: "You have been successfully logged out.",
+      // The toast will automatically disappear after the default timeout
     })
+
+    // Immediately redirect to the home page
     router.push("/chat")
+
+    // Force a page refresh to ensure all state is cleared
+    setTimeout(() => {
+      window.location.href = "/chat"
+    }, 100)
   }
 
   return (

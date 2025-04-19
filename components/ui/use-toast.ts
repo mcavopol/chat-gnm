@@ -9,10 +9,11 @@ type ToastProps = {
   description?: string
   action?: React.ReactNode
   variant?: "default" | "destructive"
+  duration?: number // Add duration property
 }
 
 const TOAST_LIMIT = 5
-const TOAST_REMOVE_DELAY = 5000
+const TOAST_REMOVE_DELAY = 3000 // Reduced from 5000 to 3000 for faster disappearance
 
 type ToasterToast = ToastProps & {
   open: boolean
@@ -38,7 +39,7 @@ export function useToast() {
     }
   }, [])
 
-  const toast = useCallback(({ ...props }: Toast) => {
+  const toast = useCallback(({ duration = TOAST_REMOVE_DELAY, ...props }: Toast) => {
     const id = genId()
 
     const newToast = {
@@ -57,7 +58,7 @@ export function useToast() {
           setToastCount((count) => count - 1)
         }
       })
-    }, TOAST_REMOVE_DELAY)
+    }, duration)
 
     return id
   }, [])
