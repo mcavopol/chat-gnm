@@ -7,35 +7,70 @@ import { ArrowUpIcon, HistoryIcon, PlusCircle, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import { AutoResizeTextarea } from "@/components/autoresize-textarea"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { MessageContent } from "@/components/message-content"
-import { addMessageToChat, chatExists, createChat, getChat, processUserMessage } from "@/lib/chat-store"
-import { useRouter, useSearchParams } from "next/navigation"
+import { addMessageToChat, chatExists, createChat, getChat, processUserMessage, getChats } from "@/lib/chat-store"
+import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { NavigationModal } from "./navigation-modal"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { ConversationStarters } from "./conversation-starters"
+import { getMemories } from "@/lib/memory-store"
+import { useAuth } from "@/context/auth-context"
+import { LoginPrompt } from "./login-prompt"
 
 export function ChatForm({ className, ...props }: React.ComponentProps<"form">) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const chatId = searchParams.get("id")
+  const { isAuthenticated, isGuest, logout } = useAuth()
 
   const [isNavModalOpen, setIsNavModalOpen] = useState(false)
   const [navModalTab, setNavModalTab] = useState<"about" | "history">("about")
   const [isCreatingChat, setIsCreatingChat] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false)
+  const [hasCompletedFirstExchange, setHasCompletedFirstExchange] = useState(false)
   const isMobile = useMediaQuery("(max-width: 640px)")
 
-  const { messages, input, setInput, append, setMessages } = useChat({
+  // Use a ref to track if this is the first message
+  const isFirstMessageRef = useRef(true)
+
+  const {
+    messages,
+    input,
+    setInput,
+    append,
+    setMessages,
+    isLoading: isAiLoading,
+  } = useChat({
     api: "/api/chat",
     id: chatId || undefined,
     body: {
       chatId,
     },
     onFinish: async (message) => {
-      if (chatId) {
+      console.log("AI finished responding", {
+        isGuest,
+        isFirstMessage: isFirstMessageRef.current,
+        messagesLength: messages.length,
+      })
+
+      // If this was the first exchange and user is a guest, show login prompt
+      if (isGuest && isFirstMessageRef.current) {
+        console.log("Setting hasCompletedFirstExchange to true")
+        setHasCompletedFirstExchange(true)
+        isFirstMessageRef.current = false
+
+        // Show login prompt after a short delay to ensure UI updates
+        setTimeout(() => {
+          console.log("Showing login prompt")
+          setShowLoginPrompt(true)
+        }, 500)
+      }
+
+      if (isAuthenticated && chatId) {
         try {
           // Check if chat exists before adding message
           const exists = await chatExists(chatId)
@@ -45,6 +80,8 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
               content: message.content,
               createdAt: new Date(),
             })
+            // Refresh chat history after adding a message
+            checkChats()
           } else {
             console.error(`Chat with ID ${chatId} not found when adding assistant message`)
             // If chat doesn't exist, create a new one and redirect
@@ -57,30 +94,101 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
     },
   })
 
-  // Load chat messages when chatId changes
+  // Add these state variables and effects
+  const [hasMemories, setHasMemories] = useState(false)
+  const [hasChats, setHasChats] = useState(false)
+  const [isCheckingMemories, setIsCheckingMemories] = useState(true)
+  const [isCheckingChats, setIsCheckingChats] = useState(true)
+  const pathname = usePathname()
+
+  // Reset first message flag when messages are cleared
+  useEffect(() => {
+    if (messages.length === 0) {
+      console.log("Resetting isFirstMessageRef to true")
+      isFirstMessageRef.current = true
+      setHasCompletedFirstExchange(false)
+      setShowLoginPrompt(false)
+    }
+  }, [messages.length])
+
+  // Create reusable functions for checking memories and chats
+  const checkMemories = useCallback(async () => {
+    if (!isAuthenticated) return
+
+    setIsCheckingMemories(true)
+    try {
+      const memories = await getMemories()
+      console.log("Memories found:", memories.length)
+      setHasMemories(memories.length > 0)
+    } catch (error) {
+      console.error("Failed to check memories:", error)
+      setHasMemories(false)
+    } finally {
+      setIsCheckingMemories(false)
+    }
+  }, [isAuthenticated])
+
+  const checkChats = useCallback(async () => {
+    if (!isAuthenticated) return
+
+    setIsCheckingChats(true)
+    try {
+      const chats = await getChats()
+      console.log("Chats found:", chats.length)
+      setHasChats(chats.length > 0)
+    } catch (error) {
+      console.error("Failed to check chats:", error)
+      setHasChats(false)
+    } finally {
+      setIsCheckingChats(false)
+    }
+  }, [isAuthenticated])
+
+  // Initial check for memories and chats if authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      checkMemories()
+      checkChats()
+    }
+  }, [isAuthenticated, checkMemories, checkChats])
+
+  // Refresh checks when modal is closed (in case user added/deleted items)
+  useEffect(() => {
+    if (!isNavModalOpen && isAuthenticated) {
+      checkMemories()
+      checkChats()
+    }
+  }, [isNavModalOpen, isAuthenticated, checkMemories, checkChats])
+
+  // Determine if we're in an active conversation
+  const isActiveConversation = chatId !== null && messages.length > 0
+  const isRootChatRoute = pathname === "/chat" && !chatId
+
+  // Load chat messages when chatId changes (only if authenticated)
   useEffect(() => {
     const loadChat = async () => {
+      if (!isAuthenticated || !chatId) {
+        setIsLoading(false)
+        return
+      }
+
       setIsLoading(true)
       setError(null)
 
       try {
-        if (chatId) {
-          const chat = await getChat(chatId)
-          if (chat) {
-            setMessages(
-              chat.messages.map((msg) => ({
-                id: msg.id,
-                role: msg.role,
-                content: msg.content,
-              })),
-            )
-          } else {
-            // If chat doesn't exist, create a new one
-            console.warn(`Chat with ID ${chatId} not found, creating new chat`)
-            handleNewChat()
-          }
+        const chat = await getChat(chatId)
+        if (chat) {
+          setMessages(
+            chat.messages.map((msg) => ({
+              id: msg.id,
+              role: msg.role,
+              content: msg.content,
+            })),
+          )
         } else {
-          setMessages([])
+          // If chat doesn't exist, create a new one
+          console.warn(`Chat with ID ${chatId} not found, creating new chat`)
+          handleNewChat()
         }
       } catch (error) {
         console.error("Error loading chat:", error)
@@ -91,7 +199,7 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
     }
 
     loadChat()
-  }, [chatId, setMessages])
+  }, [chatId, isAuthenticated, setMessages])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -102,52 +210,67 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
     setInput("")
     setError(null)
 
+    console.log("Submitting message", {
+      isGuest,
+      isFirstMessage: isFirstMessageRef.current,
+      messagesLength: messages.length,
+    })
+
     try {
-      setIsCreatingChat(true)
+      if (isAuthenticated) {
+        setIsCreatingChat(true)
 
-      // Ensure we have a valid chat
-      let currentChatId = chatId
-      let shouldRedirect = false
+        // Ensure we have a valid chat
+        let currentChatId = chatId
+        let shouldRedirect = false
 
-      if (!currentChatId) {
-        // No chat ID, create a new one
-        const newChat = await createChat()
-        currentChatId = newChat.id
-        shouldRedirect = true
-      } else {
-        // Check if the chat exists
-        const exists = await chatExists(currentChatId)
-        if (!exists) {
-          // Chat doesn't exist, create a new one
+        if (!currentChatId) {
+          // No chat ID, create a new one
           const newChat = await createChat()
           currentChatId = newChat.id
           shouldRedirect = true
+        } else {
+          // Check if the chat exists
+          const exists = await chatExists(currentChatId)
+          if (!exists) {
+            // Chat doesn't exist, create a new one
+            const newChat = await createChat()
+            currentChatId = newChat.id
+            shouldRedirect = true
+          }
+        }
+
+        // Add user message to chat history
+        const messageResult = await addMessageToChat(currentChatId, {
+          role: "user",
+          content: userMessage,
+          createdAt: new Date(),
+        })
+
+        if (!messageResult) {
+          throw new Error("Failed to add message to chat")
+        }
+
+        // Process the user message for memory extraction/updates
+        processUserMessage(userMessage)
+          .then(() => {
+            // Refresh memories after processing
+            checkMemories()
+          })
+          .catch((error) => {
+            console.error("Error processing user message for memories:", error)
+          })
+
+        // Refresh chat history after adding a message
+        checkChats()
+
+        // Redirect if needed (do this before append to avoid race conditions)
+        if (shouldRedirect) {
+          router.push(`/chat?id=${currentChatId}`)
         }
       }
 
-      // Add user message to chat history
-      const messageResult = await addMessageToChat(currentChatId, {
-        role: "user",
-        content: userMessage,
-        createdAt: new Date(),
-      })
-
-      if (!messageResult) {
-        throw new Error("Failed to add message to chat")
-      }
-
-      // Process the user message for memory extraction/updates
-      // This happens asynchronously and doesn't block the chat flow
-      processUserMessage(userMessage).catch((error) => {
-        console.error("Error processing user message for memories:", error)
-      })
-
-      // Redirect if needed (do this before append to avoid race conditions)
-      if (shouldRedirect) {
-        router.push(`/chat?id=${currentChatId}`)
-      }
-
-      // Send message to AI
+      // Send message to AI (for both guest and authenticated users)
       await append({
         role: "user",
         content: userMessage,
@@ -169,11 +292,22 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
   }
 
   const handleNewChat = async () => {
+    if (!isAuthenticated) {
+      // For guest users, just clear the messages
+      setMessages([])
+      isFirstMessageRef.current = true
+      setHasCompletedFirstExchange(false)
+      setShowLoginPrompt(false)
+      return
+    }
+
     try {
       setIsCreatingChat(true)
       const newChat = await createChat()
       router.push(`/chat?id=${newChat.id}`)
       setMessages([])
+      // Refresh chat history after creating a new chat
+      checkChats()
     } catch (error) {
       console.error("Failed to create new chat:", error)
       setError("Failed to create new chat")
@@ -203,6 +337,20 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
     // Set the tab first, then open the modal
     setNavModalTab(tab)
     setIsNavModalOpen(true)
+  }
+
+  // We keep the handleLogout function for future use but remove the button
+  const handleLogout = () => {
+    logout()
+    setMessages([])
+    isFirstMessageRef.current = true
+    setHasCompletedFirstExchange(false)
+    setShowLoginPrompt(false)
+    router.push("/chat")
+  }
+
+  const handleLoginClose = () => {
+    setShowLoginPrompt(false)
   }
 
   const header = (
@@ -247,6 +395,28 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
   // Determine if the submit button should have a blue background
   const hasText = input.trim().length > 0
 
+  // Determine if the input form should be shown
+  // Hide input when:
+  // 1. Login prompt is shown AND user is not authenticated
+  // 2. OR when AI is loading
+  // 3. OR when user has completed first exchange but is not authenticated
+  const shouldHideInput =
+    (showLoginPrompt && !isAuthenticated) || isAiLoading || (hasCompletedFirstExchange && !isAuthenticated)
+
+  const showInputForm = !shouldHideInput
+
+  // Debug output
+  console.log("Render state:", {
+    isGuest,
+    isAuthenticated,
+    showLoginPrompt,
+    hasCompletedFirstExchange,
+    isAiLoading,
+    shouldHideInput,
+    showInputForm,
+    messagesLength: messages.length,
+  })
+
   return (
     <TooltipProvider>
       <main
@@ -257,55 +427,67 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
         {...props}
       >
         <div className="sticky top-0 z-10 flex justify-between p-4 bg-white/80 backdrop-blur-sm">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={cn("flex items-center gap-1.5 h-10", isMobile && "px-2.5 py-2")}
-                onClick={handleNewChat}
-                disabled={isCreatingChat}
-                aria-label="New chat"
-              >
-                <PlusCircle size={isMobile ? 18 : 16} />
-                {!isMobile && <span>New Chat</span>}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Start a new chat</TooltipContent>
-          </Tooltip>
-
-          <div className="flex">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn("flex items-center gap-1.5 h-10 mr-2", isMobile && "px-2.5 py-2")}
-                  onClick={() => openNavModal("about")}
-                  aria-label="About you"
-                >
-                  <User size={isMobile ? 18 : 16} />
-                  {!isMobile && <span>About You</span>}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>View and edit what ChatGNM knows about you</TooltipContent>
-            </Tooltip>
-
+          {isActiveConversation && !isRootChatRoute ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   size="sm"
                   className={cn("flex items-center gap-1.5 h-10", isMobile && "px-2.5 py-2")}
-                  onClick={() => openNavModal("history")}
-                  aria-label="Chat history"
+                  onClick={handleNewChat}
+                  disabled={isCreatingChat}
+                  aria-label="New chat"
                 >
-                  <HistoryIcon size={isMobile ? 18 : 16} />
-                  {!isMobile && <span>History</span>}
+                  <PlusCircle size={isMobile ? 18 : 16} />
+                  {!isMobile && <span>New Chat</span>}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>View chat history</TooltipContent>
+              <TooltipContent>Start a new chat</TooltipContent>
             </Tooltip>
+          ) : (
+            <div /> // Empty div for spacing when new chat button is hidden
+          )}
+
+          <div className="flex">
+            {isAuthenticated && (
+              <>
+                {!isCheckingMemories && hasMemories && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn("flex items-center gap-1.5 h-10 mr-2", isMobile && "px-2.5 py-2")}
+                        onClick={() => openNavModal("about")}
+                        aria-label="About you"
+                      >
+                        <User size={isMobile ? 18 : 16} />
+                        {!isMobile && <span>About You</span>}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>View and edit what ChatGNM knows about you</TooltipContent>
+                  </Tooltip>
+                )}
+
+                {!isCheckingChats && hasChats && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn("flex items-center gap-1.5 h-10", isMobile && "px-2.5 py-2")}
+                        onClick={() => openNavModal("history")}
+                        aria-label="Chat history"
+                      >
+                        <HistoryIcon size={isMobile ? 18 : 16} />
+                        {!isMobile && <span>History</span>}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>View chat history</TooltipContent>
+                  </Tooltip>
+                )}
+              </>
+            )}
           </div>
         </div>
 
@@ -320,7 +502,12 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
           </motion.div>
         )}
 
-        <div className="flex-1 content-center overflow-y-auto px-6">
+        <div
+          className={cn(
+            "flex-1 content-center overflow-y-auto px-6",
+            showLoginPrompt && !isAuthenticated && "pb-24", // Add padding at the bottom when login prompt is shown
+          )}
+        >
           {isLoading ? (
             <div className="flex justify-center items-center h-full">
               <motion.div
@@ -342,39 +529,48 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
           )}
         </div>
 
-        <motion.form
-          onSubmit={handleSubmit}
-          className="border-input bg-background focus-within:ring-ring/10 relative mx-6 mb-6 flex items-center rounded-[16px] border px-3 py-1.5 pr-8 text-sm focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-0"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.2 }}
-        >
-          <AutoResizeTextarea
-            onKeyDown={handleKeyDown}
-            onChange={(v) => setInput(v)}
-            value={input}
-            placeholder="Enter a message"
-            className="placeholder:text-muted-foreground flex-1 bg-transparent focus:outline-none"
-            disabled={isCreatingChat || isLoading}
-          />
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="submit"
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  "absolute bottom-1 right-1 size-6 rounded-full transition-colors duration-300",
-                  hasText && "bg-blue-600 text-white hover:bg-blue-700",
-                )}
-                disabled={isCreatingChat || isLoading || !input.trim()}
-              >
-                <ArrowUpIcon size={16} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent sideOffset={12}>Submit</TooltipContent>
-          </Tooltip>
-        </motion.form>
+        <AnimatePresence>
+          {showInputForm && (
+            <motion.form
+              onSubmit={handleSubmit}
+              className="border-input bg-background focus-within:ring-ring/10 relative mx-6 mb-6 flex items-center rounded-[16px] border px-3 py-1.5 pr-8 text-sm focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-0"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <AutoResizeTextarea
+                onKeyDown={handleKeyDown}
+                onChange={(v) => setInput(v)}
+                value={input}
+                placeholder="Enter a message"
+                className="placeholder:text-muted-foreground flex-1 bg-transparent focus:outline-none"
+                disabled={isCreatingChat || isLoading}
+              />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="submit"
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "absolute bottom-1 right-1 size-6 rounded-full transition-colors duration-300",
+                      hasText && "bg-blue-600 text-white hover:bg-blue-700",
+                    )}
+                    disabled={isCreatingChat || isLoading || !input.trim()}
+                  >
+                    <ArrowUpIcon size={16} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent sideOffset={12}>Submit</TooltipContent>
+              </Tooltip>
+            </motion.form>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {showLoginPrompt && !isAuthenticated && <LoginPrompt onClose={handleLoginClose} />}
+        </AnimatePresence>
 
         <NavigationModal
           isOpen={isNavModalOpen}
@@ -382,6 +578,8 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
           initialTab={navModalTab}
           currentChatId={chatId}
           onSelectChat={handleSelectChat}
+          onMemoryChange={checkMemories}
+          onChatChange={checkChats}
         />
       </main>
     </TooltipProvider>

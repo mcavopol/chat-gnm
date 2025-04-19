@@ -11,9 +11,10 @@ import { useRouter } from "next/navigation"
 interface HistoryContentProps {
   currentChatId: string | null
   onSelectChat: (chatId: string) => void
+  onChatChange?: () => void
 }
 
-export function HistoryContent({ currentChatId, onSelectChat }: HistoryContentProps) {
+export function HistoryContent({ currentChatId, onSelectChat, onChatChange }: HistoryContentProps) {
   const [chats, setChats] = useState<Chat[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
@@ -48,10 +49,15 @@ export function HistoryContent({ currentChatId, onSelectChat }: HistoryContentPr
       // Update the local state
       setChats(chats.filter((chat) => chat.id !== chatId))
 
+      // Notify parent component that chats have changed
+      if (onChatChange) {
+        onChatChange()
+      }
+
       // If we're deleting the current chat, redirect to /chat
       if (isDeletingCurrentChat) {
-        // Use window.location for a hard redirect with the full path
-        window.location.href = `${window.location.origin}/chat`
+        // Use window.location for a hard redirect instead of router.push
+        window.location.href = "/chat"
         return
       }
     } catch (error) {

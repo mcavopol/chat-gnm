@@ -7,8 +7,8 @@ export async function POST(req: Request) {
   const { messages, chatId }: { messages: CoreMessage[]; chatId?: string } = await req.json()
   const systemPrompt = await getSystemPrompt()
 
-  // Get user memories to include in the context
-  const memoriesContext = await getMemoriesForContext()
+  // Get user memories to include in the context (only if chatId is provided)
+  const memoriesContext = chatId ? await getMemoriesForContext() : ""
 
   // Combine the system prompt with the memories
   const fullSystemPrompt = `${systemPrompt}

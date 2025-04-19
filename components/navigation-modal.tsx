@@ -17,6 +17,8 @@ interface NavigationModalProps {
   initialTab?: "about" | "history"
   currentChatId: string | null
   onSelectChat: (chatId: string) => void
+  onMemoryChange?: () => void
+  onChatChange?: () => void
 }
 
 export function NavigationModal({
@@ -25,6 +27,8 @@ export function NavigationModal({
   initialTab = "about",
   currentChatId,
   onSelectChat,
+  onMemoryChange,
+  onChatChange,
 }: NavigationModalProps) {
   const [activeTab, setActiveTab] = useState<"about" | "history">(initialTab)
   const isMobile = useMediaQuery("(max-width: 640px)")
@@ -60,16 +64,6 @@ export function NavigationModal({
       document.body.style.overflow = ""
     }
   }, [isMobile, isOpen])
-
-  // Add a useEffect to check if currentChatId exists after the modal is opened
-  useEffect(() => {
-    if (isOpen && activeTab === "history" && !currentChatId) {
-      // If the modal is open on the history tab but there's no current chat ID,
-      // it likely means the current chat was deleted
-      router.push("/chat")
-      onClose()
-    }
-  }, [isOpen, activeTab, currentChatId, router, onClose])
 
   if (!isOpen) return null
 
@@ -123,7 +117,7 @@ export function NavigationModal({
 
         <div className="overflow-y-auto max-h-[calc(80vh-60px)]">
           {activeTab === "about" ? (
-            <AboutYouContent />
+            <AboutYouContent onMemoryChange={onMemoryChange} />
           ) : (
             <HistoryContent
               currentChatId={currentChatId}
@@ -131,6 +125,7 @@ export function NavigationModal({
                 onSelectChat(chatId)
                 onClose()
               }}
+              onChatChange={onChatChange}
             />
           )}
         </div>

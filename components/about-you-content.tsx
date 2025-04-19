@@ -5,7 +5,11 @@ import { Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { type Memory, addMemory, deleteMemory, getMemories } from "@/lib/memory-store"
 
-export function AboutYouContent() {
+interface AboutYouContentProps {
+  onMemoryChange?: () => void
+}
+
+export function AboutYouContent({ onMemoryChange }: AboutYouContentProps) {
   const [memories, setMemories] = useState<Memory[]>([])
   const [newMemory, setNewMemory] = useState("")
   const [isLoading, setIsLoading] = useState(true)
@@ -35,6 +39,10 @@ export function AboutYouContent() {
       await addMemory(newMemory, "user-added")
       setNewMemory("")
       await loadMemories()
+      // Notify parent component that memories have changed
+      if (onMemoryChange) {
+        onMemoryChange()
+      }
     } catch (error) {
       console.error("Failed to add memory:", error)
     } finally {
@@ -46,6 +54,10 @@ export function AboutYouContent() {
     try {
       await deleteMemory(id)
       setMemories(memories.filter((memory) => memory.id !== id))
+      // Notify parent component that memories have changed
+      if (onMemoryChange) {
+        onMemoryChange()
+      }
     } catch (error) {
       console.error("Failed to delete memory:", error)
     }

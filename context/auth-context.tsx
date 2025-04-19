@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from "
 
 interface AuthContextType {
   isAuthenticated: boolean
+  isGuest: boolean
   login: () => Promise<void>
   logout: () => void
 }
@@ -12,13 +13,20 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isGuest, setIsGuest] = useState(true) // Default to guest
 
   // Check if user is already authenticated on mount
   useEffect(() => {
-    // In a real app, you would check a token in localStorage or cookies
     const checkAuth = () => {
       const hasSession = localStorage.getItem("chatgnm-session")
       setIsAuthenticated(!!hasSession)
+      setIsGuest(!hasSession) // Explicitly set isGuest based on authentication status
+
+      console.log("Auth state:", {
+        hasSession: !!hasSession,
+        isAuthenticated: !!hasSession,
+        isGuest: !hasSession,
+      })
     }
 
     checkAuth()
@@ -29,14 +37,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await new Promise((resolve) => setTimeout(resolve, 1000))
     localStorage.setItem("chatgnm-session", "true")
     setIsAuthenticated(true)
+    setIsGuest(false)
+    console.log("Logged in, new auth state:", { isAuthenticated: true, isGuest: false })
   }
 
   const logout = () => {
     localStorage.removeItem("chatgnm-session")
     setIsAuthenticated(false)
+    setIsGuest(true)
+    console.log("Logged out, new auth state:", { isAuthenticated: false, isGuest: true })
   }
 
-  return <AuthContext.Provider value={{ isAuthenticated, login, logout }}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={{ isAuthenticated, isGuest, login, logout }}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {
