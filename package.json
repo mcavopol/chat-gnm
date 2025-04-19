@@ -59,12 +59,13 @@
     "vaul": "^0.9.6",
     "zod": "^3.24.1",
     "@emotion/is-prop-valid": "latest",
+    "ai": "latest",
+    "@ai-sdk/openai": "latest",
+    "nanoid": "latest",
     "react-markdown": "latest",
     "remark-gfm": "latest",
-    "nanoid": "latest",
-    "framer-motion": "latest",
-    "ai": "latest",
-    "@ai-sdk/openai": "latest"
+    "crypto": "latest",
+    "framer-motion": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",

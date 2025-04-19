@@ -23,6 +23,7 @@ export function HistoryContent({ currentChatId, onSelectChat, onChatChange }: Hi
     setIsLoading(true)
     try {
       const chatHistory = await getChats()
+      console.log("Loaded chat history:", chatHistory.length, "chats")
       setChats(chatHistory)
     } catch (error) {
       console.error("Failed to load chat history:", error)
@@ -65,6 +66,11 @@ export function HistoryContent({ currentChatId, onSelectChat, onChatChange }: Hi
     }
   }
 
+  const handleSelectChatItem = (chatId: string) => {
+    console.log(`Selecting chat with ID: ${chatId}`)
+    onSelectChat(chatId)
+  }
+
   const formatDate = (date: Date) => {
     const now = new Date()
     const chatDate = new Date(date)
@@ -105,7 +111,7 @@ export function HistoryContent({ currentChatId, onSelectChat, onChatChange }: Hi
                 "p-4 border-b cursor-pointer hover:bg-gray-50 transition-colors relative group",
                 currentChatId === chat.id && "bg-gray-100",
               )}
-              onClick={() => onSelectChat(chat.id)}
+              onClick={() => handleSelectChatItem(chat.id)}
             >
               <div className="flex justify-between items-start mb-1">
                 <h3 className="font-medium text-sm truncate pr-6">{chat.title}</h3>

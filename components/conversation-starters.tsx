@@ -14,26 +14,26 @@ export function ConversationStarters({ onSelectStarter, className }: Conversatio
     {
       text: "Can you explain the five biological laws using examples?",
       icon: <BookOpen size={18} />,
-      color: "bg-blue-50 border-blue-200 hover:bg-blue-100",
-      iconColor: "text-blue-500 group-hover:text-blue-600",
+      color: "bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 hover:from-gray-100 hover:to-gray-200",
+      iconColor: "text-gray-600 group-hover:text-gray-800",
     },
     {
       text: "Share insights or stories from GNM resources.",
       icon: <MessageSquare size={18} />,
-      color: "bg-green-50 border-green-200 hover:bg-green-100",
-      iconColor: "text-green-500 group-hover:text-green-600",
+      color: "bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 hover:from-gray-100 hover:to-gray-200",
+      iconColor: "text-gray-600 group-hover:text-gray-800",
     },
     {
       text: "How can GNM help understand specific health issues?",
       icon: <Activity size={18} />,
-      color: "bg-purple-50 border-purple-200 hover:bg-purple-100",
-      iconColor: "text-purple-500 group-hover:text-purple-600",
+      color: "bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 hover:from-gray-100 hover:to-gray-200",
+      iconColor: "text-gray-600 group-hover:text-gray-800",
     },
     {
       text: "Teach me about the two-phase healing process.",
       icon: <RefreshCw size={18} />,
-      color: "bg-amber-50 border-amber-200 hover:bg-amber-100",
-      iconColor: "text-amber-500 group-hover:text-amber-600",
+      color: "bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 hover:from-gray-100 hover:to-gray-200",
+      iconColor: "text-gray-600 group-hover:text-gray-800",
     },
   ]
 
@@ -67,7 +67,7 @@ export function ConversationStarters({ onSelectStarter, className }: Conversatio
             key={index}
             className={cn(
               "group text-left p-4 border rounded-xl transition-colors duration-300 shadow-sm",
-              "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500",
+              "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400",
               starter.color,
             )}
             onClick={() => onSelectStarter(starter.text)}
@@ -89,8 +89,8 @@ export function ConversationStarters({ onSelectStarter, className }: Conversatio
         <motion.button
           className={cn(
             "group text-left p-4 border rounded-xl transition-colors duration-300 shadow-sm",
-            "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500",
-            "bg-red-50 border-red-200 hover:bg-red-100",
+            "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400",
+            "bg-gradient-to-br from-gray-100 to-gray-200 border-gray-300 hover:from-gray-200 hover:to-gray-300",
             "col-span-1 md:col-span-2 mt-1", // Span 2 columns on md screens and above
           )}
           onClick={() => onSelectStarter("Help me troubleshoot a symptom.")}
@@ -98,7 +98,7 @@ export function ConversationStarters({ onSelectStarter, className }: Conversatio
           whileTap={{ scale: 0.98 }}
         >
           <div className="flex items-center space-x-3">
-            <div className="flex-shrink-0 transition-colors duration-300 text-red-500 group-hover:text-red-600">
+            <div className="flex-shrink-0 transition-colors duration-300 text-gray-700 group-hover:text-gray-900">
               <Stethoscope size={18} />
             </div>
             <p className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors duration-300 font-medium">

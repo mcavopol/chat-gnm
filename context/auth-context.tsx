@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { getUserProfile } from "@/lib/user-profile-store"
 
 interface AuthContextType {
   isAuthenticated: boolean
@@ -17,15 +18,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Check if user is already authenticated on mount
   useEffect(() => {
-    const checkAuth = () => {
+    const checkAuth = async () => {
       const hasSession = localStorage.getItem("chatgnm-session")
-      setIsAuthenticated(!!hasSession)
-      setIsGuest(!hasSession) // Explicitly set isGuest based on authentication status
+
+      // Also check if we have a user profile
+      const profile = await getUserProfile()
+
+      // Consider authenticated if either session exists or profile exists
+      const isAuth = !!hasSession || !!profile
+
+      setIsAuthenticated(isAuth)
+      setIsGuest(!isAuth)
 
       console.log("Auth state:", {
         hasSession: !!hasSession,
-        isAuthenticated: !!hasSession,
-        isGuest: !hasSession,
+        hasProfile: !!profile,
+        isAuthenticated: isAuth,
+        isGuest: !isAuth,
       })
     }
 

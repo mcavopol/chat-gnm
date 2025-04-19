@@ -18,6 +18,7 @@ import { ConversationStarters } from "./conversation-starters"
 import { getMemories } from "@/lib/memory-store"
 import { useAuth } from "@/context/auth-context"
 import { LoginPrompt } from "./login-prompt"
+import { HeaderLogin } from "./header-login"
 
 export function ChatForm({ className, ...props }: React.ComponentProps<"form">) {
   const router = useRouter()
@@ -31,11 +32,12 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showLoginPrompt, setShowLoginPrompt] = useState(false)
-  const [hasCompletedFirstExchange, setHasCompletedFirstExchange] = useState(false)
+  const [hasCompletedSecondExchange, setHasCompletedSecondExchange] = useState(false)
   const isMobile = useMediaQuery("(max-width: 640px)")
+  const [chatLoadAttempted, setChatLoadAttempted] = useState(false)
 
-  // Use a ref to track if this is the first message
-  const isFirstMessageRef = useRef(true)
+  // Use a ref to track the message count
+  const userMessageCountRef = useRef(0)
 
   const {
     messages,
@@ -50,22 +52,25 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
     body: {
       chatId,
     },
+    onError: (error) => {
+      console.error("Chat API error:", error)
+      setError("An error occurred while communicating with the AI. Please try again.")
+    },
     onFinish: async (message) => {
       console.log("AI finished responding", {
         isGuest,
-        isFirstMessage: isFirstMessageRef.current,
+        userMessageCount: userMessageCountRef.current,
         messagesLength: messages.length,
       })
 
-      // If this was the first exchange and user is a guest, show login prompt
-      if (isGuest && isFirstMessageRef.current) {
-        console.log("Setting hasCompletedFirstExchange to true")
-        setHasCompletedFirstExchange(true)
-        isFirstMessageRef.current = false
+      // If this was the second exchange and user is a guest, show login prompt
+      if (isGuest && userMessageCountRef.current === 2) {
+        console.log("Setting hasCompletedSecondExchange to true")
+        setHasCompletedSecondExchange(true)
 
         // Show login prompt after a short delay to ensure UI updates
         setTimeout(() => {
-          console.log("Showing login prompt")
+          console.log("Showing login prompt after second exchange")
           setShowLoginPrompt(true)
         }, 500)
       }
@@ -101,12 +106,12 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
   const [isCheckingChats, setIsCheckingChats] = useState(true)
   const pathname = usePathname()
 
-  // Reset first message flag when messages are cleared
+  // Reset message count when messages are cleared
   useEffect(() => {
     if (messages.length === 0) {
-      console.log("Resetting isFirstMessageRef to true")
-      isFirstMessageRef.current = true
-      setHasCompletedFirstExchange(false)
+      console.log("Resetting userMessageCountRef to 0")
+      userMessageCountRef.current = 0
+      setHasCompletedSecondExchange(false)
       setShowLoginPrompt(false)
     }
   }, [messages.length])
@@ -167,6 +172,9 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
   // Load chat messages when chatId changes (only if authenticated)
   useEffect(() => {
     const loadChat = async () => {
+      // Reset chat load attempted flag when chatId changes
+      setChatLoadAttempted(false)
+
       if (!isAuthenticated || !chatId) {
         setIsLoading(false)
         return
@@ -176,30 +184,71 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
       setError(null)
 
       try {
+        console.log(`Loading chat with ID: ${chatId}`)
         const chat = await getChat(chatId)
+
         if (chat) {
-          setMessages(
-            chat.messages.map((msg) => ({
-              id: msg.id,
-              role: msg.role,
-              content: msg.content,
-            })),
+          console.log(
+            `Chat found with ${chat.messages.length} messages:`,
+            chat.messages.map((m) => `${m.role}: ${m.content.substring(0, 20)}...`),
           )
+
+          // Map the messages to the format expected by useChat
+          const mappedMessages = chat.messages.map((msg) => ({
+            id: msg.id,
+            role: msg.role,
+            content: msg.content,
+          }))
+
+          console.log(`Setting ${mappedMessages.length} messages in chat state`)
+
+          // Clear existing messages first to ensure clean state
+          setMessages([])
+
+          // Use setTimeout to ensure the state update happens in the next tick
+          setTimeout(() => {
+            setMessages(mappedMessages)
+
+            // Count user messages in the loaded chat
+            const userMsgCount = chat.messages.filter((msg) => msg.role === "user").length
+            userMessageCountRef.current = userMsgCount
+
+            // If there are already 2 or more user messages and user is guest, set completed second exchange
+            if (isGuest && userMsgCount >= 2) {
+              setHasCompletedSecondExchange(true)
+              setShowLoginPrompt(true)
+            }
+
+            setIsLoading(false)
+          }, 0)
         } else {
           // If chat doesn't exist, create a new one
           console.warn(`Chat with ID ${chatId} not found, creating new chat`)
           handleNewChat()
+          setIsLoading(false)
         }
       } catch (error) {
         console.error("Error loading chat:", error)
         setError("Failed to load chat")
-      } finally {
         setIsLoading(false)
       }
+
+      // Mark that we've attempted to load the chat
+      setChatLoadAttempted(true)
     }
 
     loadChat()
-  }, [chatId, isAuthenticated, setMessages])
+  }, [chatId, isAuthenticated, setMessages, isGuest])
+
+  // Add a debug effect to log messages when they change
+  useEffect(() => {
+    if (chatId && chatLoadAttempted) {
+      console.log(
+        `Current messages in chat state (${messages.length}):`,
+        messages.map((m) => `${m.role}: ${m.content.substring(0, 20)}...`),
+      )
+    }
+  }, [messages, chatId, chatLoadAttempted])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -210,9 +259,15 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
     setInput("")
     setError(null)
 
+    // Increment user message count for guest users
+    if (isGuest) {
+      userMessageCountRef.current += 1
+      console.log("User message count increased to:", userMessageCountRef.current)
+    }
+
     console.log("Submitting message", {
       isGuest,
-      isFirstMessage: isFirstMessageRef.current,
+      userMessageCount: userMessageCountRef.current,
       messagesLength: messages.length,
     })
 
@@ -226,17 +281,27 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
 
         if (!currentChatId) {
           // No chat ID, create a new one
-          const newChat = await createChat()
-          currentChatId = newChat.id
-          shouldRedirect = true
-        } else {
-          // Check if the chat exists
-          const exists = await chatExists(currentChatId)
-          if (!exists) {
-            // Chat doesn't exist, create a new one
+          try {
             const newChat = await createChat()
             currentChatId = newChat.id
             shouldRedirect = true
+          } catch (createError) {
+            console.error("Failed to create chat:", createError)
+            throw new Error("Failed to create a new chat")
+          }
+        } else {
+          // Check if the chat exists
+          try {
+            const exists = await chatExists(currentChatId)
+            if (!exists) {
+              // Chat doesn't exist, create a new one
+              const newChat = await createChat()
+              currentChatId = newChat.id
+              shouldRedirect = true
+            }
+          } catch (checkError) {
+            console.error("Failed to check if chat exists:", checkError)
+            throw new Error("Failed to verify chat")
           }
         }
 
@@ -270,14 +335,19 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
         }
       }
 
-      // Send message to AI (for both guest and authenticated users)
-      await append({
-        role: "user",
-        content: userMessage,
-      })
+      // Send message to AI with error handling
+      try {
+        await append({
+          role: "user",
+          content: userMessage,
+        })
+      } catch (appendError) {
+        console.error("Error appending message:", appendError)
+        throw new Error("Failed to send message to AI")
+      }
     } catch (error) {
       console.error("Error submitting message:", error)
-      setError("Failed to send message. Please try again.")
+      setError(`Failed to send message: ${error instanceof Error ? error.message : "Unknown error"}`)
     } finally {
       setIsCreatingChat(false)
     }
@@ -295,8 +365,8 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
     if (!isAuthenticated) {
       // For guest users, just clear the messages
       setMessages([])
-      isFirstMessageRef.current = true
-      setHasCompletedFirstExchange(false)
+      userMessageCountRef.current = 0
+      setHasCompletedSecondExchange(false)
       setShowLoginPrompt(false)
       return
     }
@@ -317,6 +387,8 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
   }
 
   const handleSelectChat = (selectedChatId: string) => {
+    // Clear current messages before navigating to ensure clean state
+    setMessages([])
     router.push(`/chat?id=${selectedChatId}`)
   }
 
@@ -339,12 +411,12 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
     setIsNavModalOpen(true)
   }
 
-  // We keep the handleLogout function for future use but remove the button
+  // We keep the handleLogout function for future use but removed the button
   const handleLogout = () => {
     logout()
     setMessages([])
-    isFirstMessageRef.current = true
-    setHasCompletedFirstExchange(false)
+    userMessageCountRef.current = 0
+    setHasCompletedSecondExchange(false)
     setShowLoginPrompt(false)
     router.push("/chat")
   }
@@ -374,7 +446,7 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
     <div className="my-4 flex h-fit min-h-full flex-col gap-4">
       {messages.map((message, index) => (
         <motion.div
-          key={index}
+          key={message.id || index}
           data-role={message.role}
           className={cn(
             "max-w-[80%] rounded-xl px-4 py-3 text-sm",
@@ -399,9 +471,9 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
   // Hide input when:
   // 1. Login prompt is shown AND user is not authenticated
   // 2. OR when AI is loading
-  // 3. OR when user has completed first exchange but is not authenticated
+  // 3. OR when user has completed second exchange but is not authenticated
   const shouldHideInput =
-    (showLoginPrompt && !isAuthenticated) || isAiLoading || (hasCompletedFirstExchange && !isAuthenticated)
+    (showLoginPrompt && !isAuthenticated) || isAiLoading || (hasCompletedSecondExchange && !isAuthenticated)
 
   const showInputForm = !shouldHideInput
 
@@ -410,7 +482,8 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
     isGuest,
     isAuthenticated,
     showLoginPrompt,
-    hasCompletedFirstExchange,
+    hasCompletedSecondExchange,
+    userMessageCount: userMessageCountRef.current,
     isAiLoading,
     shouldHideInput,
     showInputForm,
@@ -426,6 +499,9 @@ export function ChatForm({ className, ...props }: React.ComponentProps<"form">) 
         )}
         {...props}
       >
+        {/* Add the HeaderLogin component for the streamlined login in the top-right corner */}
+        {isRootChatRoute && <HeaderLogin />}
+
         <div className="sticky top-0 z-10 flex justify-between p-4 bg-white/80 backdrop-blur-sm">
           {isActiveConversation && !isRootChatRoute ? (
             <Tooltip>

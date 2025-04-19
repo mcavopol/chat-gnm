@@ -65,6 +65,12 @@ export function NavigationModal({
     }
   }, [isMobile, isOpen])
 
+  const handleSelectChat = (chatId: string) => {
+    console.log(`Navigation modal: selecting chat ${chatId}`)
+    onSelectChat(chatId)
+    onClose()
+  }
+
   if (!isOpen) return null
 
   return (
@@ -119,14 +125,7 @@ export function NavigationModal({
           {activeTab === "about" ? (
             <AboutYouContent onMemoryChange={onMemoryChange} />
           ) : (
-            <HistoryContent
-              currentChatId={currentChatId}
-              onSelectChat={(chatId) => {
-                onSelectChat(chatId)
-                onClose()
-              }}
-              onChatChange={onChatChange}
-            />
+            <HistoryContent currentChatId={currentChatId} onSelectChat={handleSelectChat} onChatChange={onChatChange} />
           )}
         </div>
       </motion.div>

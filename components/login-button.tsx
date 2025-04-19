@@ -6,6 +6,7 @@ import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/context/auth-context"
+import { EmailInputModal } from "./email-input-modal"
 
 interface LoginButtonProps {
   className?: string
@@ -16,25 +17,14 @@ export function LoginButton({ className }: LoginButtonProps) {
   const { login } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showEmailModal, setShowEmailModal] = useState(false)
 
-  const handleLogin = async () => {
-    setIsLoading(true)
-    setError(null)
+  const handleLoginClick = () => {
+    setShowEmailModal(true)
+  }
 
-    try {
-      // Attempt to login
-      await login()
-
-      // Add a small delay for the loading animation to be visible
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      // Successful login - redirect to chat page
-      router.push("/chat")
-    } catch (err) {
-      // Handle login error
-      setError("Login failed. Please try again.")
-      setIsLoading(false)
-    }
+  const handleEmailModalClose = () => {
+    setShowEmailModal(false)
   }
 
   return (
@@ -42,7 +32,7 @@ export function LoginButton({ className }: LoginButtonProps) {
       <motion.div whileTap={{ scale: 0.95 }} transition={{ type: "spring", stiffness: 400, damping: 17 }}>
         <Button
           size="lg"
-          onClick={handleLogin}
+          onClick={handleLoginClick}
           disabled={isLoading}
           className={cn(
             "px-8 py-6 text-lg rounded-full",
@@ -67,6 +57,8 @@ export function LoginButton({ className }: LoginButtonProps) {
           {error}
         </motion.div>
       )}
+
+      <EmailInputModal isOpen={showEmailModal} onClose={handleEmailModalClose} />
     </div>
   )
 }
