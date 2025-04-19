@@ -50,8 +50,8 @@ export function HistoryContent({ currentChatId, onSelectChat }: HistoryContentPr
 
       // If we're deleting the current chat, redirect to /chat
       if (isDeletingCurrentChat) {
-        // Use window.location for a hard redirect instead of router.push
-        window.location.href = "/chat"
+        // Use window.location for a hard redirect with the full path
+        window.location.href = `${window.location.origin}/chat`
         return
       }
     } catch (error) {

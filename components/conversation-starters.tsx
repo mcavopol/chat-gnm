@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { MessageSquare, BookOpen, Activity, RefreshCw, Stethoscope } from "lucide-react"
+import { MessageSquare, BookOpen, Activity, AlertTriangle, Stethoscope, ClipboardList } from "lucide-react"
 import { motion } from "framer-motion"
 
 interface ConversationStartersProps {
@@ -10,33 +10,6 @@ interface ConversationStartersProps {
 }
 
 export function ConversationStarters({ onSelectStarter, className }: ConversationStartersProps) {
-  const starters = [
-    {
-      text: "Can you explain the five biological laws using examples?",
-      icon: <BookOpen size={18} />,
-      color: "bg-blue-50 border-blue-200 hover:bg-blue-100",
-      iconColor: "text-blue-500 group-hover:text-blue-600",
-    },
-    {
-      text: "Share insights or stories from GNM resources.",
-      icon: <MessageSquare size={18} />,
-      color: "bg-green-50 border-green-200 hover:bg-green-100",
-      iconColor: "text-green-500 group-hover:text-green-600",
-    },
-    {
-      text: "How can GNM help understand specific health issues?",
-      icon: <Activity size={18} />,
-      color: "bg-purple-50 border-purple-200 hover:bg-purple-100",
-      iconColor: "text-purple-500 group-hover:text-purple-600",
-    },
-    {
-      text: "Teach me about the two-phase healing process.",
-      icon: <RefreshCw size={18} />,
-      color: "bg-amber-50 border-amber-200 hover:bg-amber-100",
-      iconColor: "text-amber-500 group-hover:text-amber-600",
-    },
-  ]
-
   // Animation variants for container
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -62,30 +35,111 @@ export function ConversationStarters({ onSelectStarter, className }: Conversatio
         initial="hidden"
         animate="show"
       >
-        {starters.map((starter, index) => (
-          <motion.button
-            key={index}
-            className={cn(
-              "group text-left p-4 border rounded-xl transition-colors duration-300 shadow-sm",
-              "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500",
-              starter.color,
-            )}
-            onClick={() => onSelectStarter(starter.text)}
-            variants={itemVariants}
-            whileTap={{ scale: 0.98 }}
-          >
-            <div className="flex items-center space-x-3">
-              <div className={cn("flex-shrink-0 transition-colors duration-300", starter.iconColor)}>
-                {starter.icon}
-              </div>
-              <p className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors duration-300">
-                {starter.text}
-              </p>
+        {/* New wide conversation starter at the top */}
+        <motion.button
+          className={cn(
+            "group text-left p-4 border rounded-xl transition-colors duration-300 shadow-sm",
+            "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500",
+            "bg-teal-50 border-teal-200 hover:bg-teal-100",
+            "col-span-1 md:col-span-2 mb-1", // Span 2 columns on md screens and above
+          )}
+          onClick={() => onSelectStarter("Interview me about my personal health history.")}
+          variants={itemVariants}
+          whileTap={{ scale: 0.98 }}
+        >
+          <div className="flex items-center space-x-3">
+            <div className="flex-shrink-0 transition-colors duration-300 text-teal-500 group-hover:text-teal-600">
+              <ClipboardList size={18} />
             </div>
-          </motion.button>
-        ))}
+            <p className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors duration-300 font-medium">
+              Interview me about my personal health history.
+            </p>
+          </div>
+        </motion.button>
 
-        {/* New wider conversation starter */}
+        {/* Updated regular tiles */}
+        <motion.button
+          className={cn(
+            "group text-left p-4 border rounded-xl transition-colors duration-300 shadow-sm",
+            "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500",
+            "bg-blue-50 border-blue-200 hover:bg-blue-100",
+          )}
+          onClick={() => onSelectStarter("Explain the five biological laws using examples.")}
+          variants={itemVariants}
+          whileTap={{ scale: 0.98 }}
+        >
+          <div className="flex items-center space-x-3">
+            <div className="flex-shrink-0 transition-colors duration-300 text-blue-500 group-hover:text-blue-600">
+              <BookOpen size={18} />
+            </div>
+            <p className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors duration-300">
+              Explain the five biological laws using examples.
+            </p>
+          </div>
+        </motion.button>
+
+        <motion.button
+          className={cn(
+            "group text-left p-4 border rounded-xl transition-colors duration-300 shadow-sm",
+            "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500",
+            "bg-green-50 border-green-200 hover:bg-green-100",
+          )}
+          onClick={() => onSelectStarter("Share insights or stories from GNM resources.")}
+          variants={itemVariants}
+          whileTap={{ scale: 0.98 }}
+        >
+          <div className="flex items-center space-x-3">
+            <div className="flex-shrink-0 transition-colors duration-300 text-green-500 group-hover:text-green-600">
+              <MessageSquare size={18} />
+            </div>
+            <p className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors duration-300">
+              Share insights or stories from GNM resources.
+            </p>
+          </div>
+        </motion.button>
+
+        <motion.button
+          className={cn(
+            "group text-left p-4 border rounded-xl transition-colors duration-300 shadow-sm",
+            "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500",
+            "bg-purple-50 border-purple-200 hover:bg-purple-100",
+          )}
+          onClick={() => onSelectStarter("Tell me how GNM provides a different lens for understanding health issues.")}
+          variants={itemVariants}
+          whileTap={{ scale: 0.98 }}
+        >
+          <div className="flex items-center space-x-3">
+            <div className="flex-shrink-0 transition-colors duration-300 text-purple-500 group-hover:text-purple-600">
+              <Activity size={18} />
+            </div>
+            <p className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors duration-300">
+              Tell me how GNM provides a different lens for understanding health issues.
+            </p>
+          </div>
+        </motion.button>
+
+        {/* Updated amber tile with new text and icon */}
+        <motion.button
+          className={cn(
+            "group text-left p-4 border rounded-xl transition-colors duration-300 shadow-sm",
+            "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500",
+            "bg-amber-50 border-amber-200 hover:bg-amber-100",
+          )}
+          onClick={() => onSelectStarter("Explain the key exceptions to GNM.")}
+          variants={itemVariants}
+          whileTap={{ scale: 0.98 }}
+        >
+          <div className="flex items-center space-x-3">
+            <div className="flex-shrink-0 transition-colors duration-300 text-amber-500 group-hover:text-amber-600">
+              <AlertTriangle size={18} />
+            </div>
+            <p className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors duration-300">
+              Explain the key exceptions to GNM.
+            </p>
+          </div>
+        </motion.button>
+
+        {/* Bottom wide conversation starter */}
         <motion.button
           className={cn(
             "group text-left p-4 border rounded-xl transition-colors duration-300 shadow-sm",

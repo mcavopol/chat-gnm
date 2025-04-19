@@ -61,6 +61,16 @@ export function NavigationModal({
     }
   }, [isMobile, isOpen])
 
+  // Add a useEffect to check if currentChatId exists after the modal is opened
+  useEffect(() => {
+    if (isOpen && activeTab === "history" && !currentChatId) {
+      // If the modal is open on the history tab but there's no current chat ID,
+      // it likely means the current chat was deleted
+      router.push("/chat")
+      onClose()
+    }
+  }, [isOpen, activeTab, currentChatId, router, onClose])
+
   if (!isOpen) return null
 
   return (
